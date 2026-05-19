@@ -1,0 +1,47 @@
+/* General */
+body {
+    display: flex;
+    background-color: #f1f1f1;
+
+    justify-content: center; /* horizontal align */
+    align-items: center; /* vertical */
+
+    height: 100vh;
+}
+
+
+/* Grid Setup */
+#game-grid {
+
+    /* scale evenly */
+    min-width: 400px;
+    min-height: 400px;
+    width: 80vmin;
+    height: 80vmin;
+    justify-content: center; /* horizontal align */
+
+    align-items: center; /* vertical */
+
+
+}
+/* rows */
+#game-grid div {
+    margin: 8px 0; /* vertical offset */
+    display: block;
+
+    height: 7%;
+}
+
+/* columns */
+#game-grid div div {
+    display: inline-block;
+    
+    width: 7%;
+    height: 100%;
+
+    margin: 0 4px;  /* horizontal offset */
+    border: 2px solid rgb(109, 140, 160);
+    border-radius: 3px;
+
+    background-color: #80b1d0;
+}
