@@ -24,6 +24,12 @@ function getCell(r, c) {
     }
 }
 
+// addition to getCell, helps retrieve the paragraph tag's text in the cell
+function getCellText(r, c) {
+    cellp = getCell(r, c).querySelector("p")
+    return cellp.innerHTML
+}
+
 // keeps track of players, walls, positions, turns
 class GameState {
     constructor(numPlayers) {
@@ -68,17 +74,33 @@ class GameState {
         var r = player["r"]
         var c = player["c"]
         
-        if (r > 0) {
-            moveCoords.push([r - 1, c])
+        if (r > 0) { // upward
+            if (r > 1 && getCellText(r - 1, c)) {
+                moveCoords.push([r - 2, c])
+            } else {
+                moveCoords.push([r - 1, c])
+            }
         }
-        if (r < gridSize - 1) {
-            moveCoords.push([r + 1, c])
+        if (r < gridSize - 1) {  // downward
+            if (r < gridSize - 2 && getCellText(r + 1, c)) {
+                moveCoords.push([r + 2, c])
+            } else {
+                moveCoords.push([r + 1, c])
+            }
         }
-        if (c > 0) {
-            moveCoords.push([r, c - 1])
+        if (c > 0) {  // leftward
+            if (c > 1 && getCellText(r, c - 1)) {
+                moveCoords.push([r , c - 2])
+            } else {
+                moveCoords.push([r, c - 1])
+            }
         }
-        if (c < gridSize - 1) {
-            moveCoords.push([r, c + 1])
+        if (c < gridSize - 1) {  // rightward
+            if (c < gridSize - 2 && getCellText(r, c + 1)) {
+                moveCoords.push([r, c + 2])
+            } else {
+                moveCoords.push([r, c + 1])
+            }
         }
 
         return moveCoords
@@ -149,7 +171,7 @@ class GameState {
     movePlayer(move) {
         // perform a state change with the player's move
 
-        var player = Players[this.turn]
+        var player = this.players[this.turn]
 
         // update the underlying player position
         player["r"] = move["endR"]
@@ -160,7 +182,6 @@ class GameState {
         var endCell = getCell(move["endR"], move["endC"])
         var symbol = player["symbol"]
         endCell.querySelector("p").innerHTML = symbol
-        console.log(endCell)
         startCell.querySelector("p").innerHTML = ""
     }
 }
