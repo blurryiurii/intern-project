@@ -54,3 +54,7 @@ body {
 #game-grid div div p {
     margin: 0;
 }
+
+.available-move {
+    background-color: #9580d0 !important;  /* take priority over original bgcolor */
+}
