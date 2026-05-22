@@ -41,14 +41,14 @@ body {
     width: 10%;
     aspect-ratio: 1;  /* make height same as width*/
 
-    border: 2px solid rgb(109, 140, 160);
+    border: 2px solid #6d8ca0;
     box-sizing: border-box;
     border-radius: 3px;
 
     align-items: center;
     justify-content: center;
     background-color: #80b1d0;
-    font-size: 2.7rem;
+    font-size: 2rem;
 }
 
 #game-grid div div p {
@@ -57,4 +57,12 @@ body {
 
 .available-move {
     background-color: #9580d0 !important;  /* take priority over original bgcolor */
+}
+/* todo switch to class */
+#wall {
+    position: absolute;
+    background-color: #a1826d;
+    /* box-sizing: border-box; */
+    /* border: 2px solid #7e6555; */
+    border-radius: 3px;
 }
