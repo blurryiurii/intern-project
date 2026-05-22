@@ -1,7 +1,8 @@
 const gameGrid = document.getElementById("game-grid")
 const gameLabels = document.getElementById("game-labels")
 const playerTurn = document.getElementById("player-turn")
-const wall = document.getElementById("wall")
+const wall = document.querySelector(".wall")
+console.log(wall)
 
 gridSize = 9
 numPlayers = 2
@@ -39,11 +40,11 @@ class GameState {
     constructor(numPlayers) {
         this.turn = 0
 
-        this.players = new Array()
+        this.players = []
         this.initPlayers()
 
-        this.walls = new Array()
-        this.bounds = new Array() // used for both X and Y gaps, since they're identical
+        this.walls = []
+        this.bounds = [] // bounds of the square cells; identical in len/width, so used for both
         this.setCellBounds()
         this.initWallDiv()
         this.lastWallIntent = []
@@ -54,7 +55,7 @@ class GameState {
         
         
 
-        this.moveStack = new Array()
+        this.moveStack = []
 
         this.ended = false
         this.winner = -1
@@ -128,7 +129,6 @@ class GameState {
                         break
                     }
                 }
-
             }
 
             
@@ -155,6 +155,8 @@ class GameState {
     }
 
     setWallPlaceholder() {
+        // update or hide wall placement on hover if necessary
+
         var wallIntent = this.getWallIntent()
         
         if (!wallIntent) {  // undefined = not intending to place wall
@@ -189,7 +191,8 @@ class GameState {
         }
         this.lastWallIntent = wallIntent
 
-        // wall.addEventListener("click", )
+        // update the event listener on intended placement if clicked
+        
     }
 
     setCellBounds() {
@@ -269,8 +272,6 @@ class GameState {
                 // clone cell and replace it, removing its event listeners
                 var clonedCell = cell.cloneNode(true)
                 cell.parentNode.replaceChild(clonedCell, cell)
-
-                cell.removeEventListener("click", () => { this.makeMove(move)})
             }
         });
     }

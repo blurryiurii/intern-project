@@ -58,11 +58,11 @@ body {
 .available-move {
     background-color: #9580d0 !important;  /* take priority over original bgcolor */
 }
-/* todo switch to class */
-#wall {
+
+.wall {
     position: absolute;
     background-color: #a1826d;
-    /* box-sizing: border-box; */
-    /* border: 2px solid #7e6555; */
+    box-sizing: border-box;
+    border: 2px solid #7e6555;
     border-radius: 3px;
 }
