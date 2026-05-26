@@ -1,16 +1,4 @@
-const gameGrid = document.getElementById("game-grid")
-const gameLabels = document.getElementById("game-labels")
-const playerTurn = document.getElementById("player-turn")
-const wall = document.querySelector(".wall")
-console.log(wall)
-
 gridSize = 9
-numPlayers = 2
-
-const Players = [
-    {"r": 8, "c": 4, "symbol": "X"},
-    {"r": 0, "c": 4, "symbol": "Y"}
-]
 
 function getCell(r, c) {
     row = document.getElementById("row-" + r)
@@ -37,10 +25,22 @@ function areSameObject(obj1, obj2) {
 
 // keeps track of players, walls, positions, turns
 class GameState {
-    constructor(numPlayers) {
-        this.turn = 0
+    constructor() {
+        this.gameGrid = document.getElementById("game-grid")
+        this.gameLabels = document.getElementById("game-labels")
+        this.playerTurn = document.getElementById("player-turn")
+        this.wall = document.querySelector(".wall")
 
-        this.players = []
+        this.constructCellGrid()
+
+        this.turn = 0
+        this.winner = -1
+
+        this.players = [
+            {"r": 8, "c": 4, "symbol": "X"},
+            {"r": 0, "c": 4, "symbol": "Y"}
+        ]
+
         this.initPlayers()
 
         this.walls = []
@@ -52,33 +52,70 @@ class GameState {
         // if viewport changes, our cell gaps will too; recalculate...
         window.addEventListener("resize", (event) => { this.setCellBounds() })
         window.addEventListener("resize", (event) => { this.initWallDiv() })
-        
-        
 
         this.moveStack = []
 
-        this.ended = false
-        this.winner = -1
-
-        gameGrid.addEventListener("mousemove", (event) => { this.setWallPlaceholder() })
+        this.gameGrid.addEventListener("mousemove", (event) => { this.setWallPlaceholder() })
     }
 
+    constructCellGrid() {
+        // construct grid of divs
+        for (let r = 0; r < gridSize; r++) {
+            let row = document.createElement("div")
+            row.id = "row-" + r
 
-    nextTurn() {
-        this.turn = (this.turn + 1) % numPlayers
-        this.updateTurnDisplay()
-    }
-    prevTurn() {
-        this.turn = (this.turn - 1) % numPlayers
-        this.updateTurnDisplay()
-    }
+            this.gameGrid.appendChild(row)
 
-    updateTurnDisplay() {
-        if (this.winner != -1) {
-            playerTurn.innerHTML = "WINNER! " + Players[this.winner]["symbol"]
-        } else {
-            playerTurn.innerHTML = "Player turn: " + Players[this.turn]["symbol"]
+            for (let c = 0; c < gridSize; c++) {
+                let col = document.createElement("div")
+                col.classList.add("col-" + c)
+                // col.textContent = ""
+                row.appendChild(col)
+
+                col.appendChild(document.createElement("p"))
+            }
         }
+    }
+
+    getAvailableMoves() {
+        const moves = []
+        var player = this.getCurrentPlayer()
+        var r = player["r"]
+        var c = player["c"]
+
+        if (this.winner != -1) {return []}
+
+        // scan neighboring cells for free spots; if neighbor is a player, can hop over
+        if (r > 0) { // upward
+            if (r > 1 && getCellText(r - 1, c)) {
+                moves.push([r - 2, c])
+            } else {
+                moves.push([r - 1, c])
+            }
+        }
+        if (r < gridSize - 1) {  // downward
+            if (r < gridSize - 2 && getCellText(r + 1, c)) {
+                moves.push([r + 2, c])
+            } else {
+                moves.push([r + 1, c])
+            }
+        }
+        if (c > 0) {  // leftward
+            if (c > 1 && getCellText(r, c - 1)) {
+                moves.push([r , c - 2])
+            } else {
+                moves.push([r, c - 1])
+            }
+        }
+        if (c < gridSize - 1) {  // rightward
+            if (c < gridSize - 2 && getCellText(r, c + 1)) {
+                moves.push([r, c + 2])
+            } else {
+                moves.push([r, c + 1])
+            }
+        }
+
+        return moves
     }
 
     getCurrentPlayer() {
@@ -87,12 +124,12 @@ class GameState {
     }
 
     getRelativePos(obj) {
-        // relative to gameGrid
+        // ...relative to gameGrid
 
         var viewportX = event.clientX  // top left corner of user screen
         var viewportY = event.clientY
 
-        var gridPos = gameGrid.getBoundingClientRect()
+        var gridPos = this.gameGrid.getBoundingClientRect()
         var gameGridX = gridPos.x  // top left corner of gameGrid
         var gameGridY = gridPos.y
 
@@ -114,7 +151,7 @@ class GameState {
 
         var found = false
         
-        var gridPos = gameGrid.getBoundingClientRect()
+        var gridPos = this.gameGrid.getBoundingClientRect()
         if (relativeX > 0 && relativeX < gridPos.width && relativeY > 0 && relativeY < gridPos.height) {
 
             // horizontal intents
@@ -131,7 +168,6 @@ class GameState {
                 }
             }
 
-            
             // vertical
             for (let c = 0; c < gridSize; c++) {
                 if (found) break
@@ -153,127 +189,32 @@ class GameState {
             return
         }
     }
+    
+    initPlayers() {
+        // create and move players to their starting positions
+        for (let n = 0; n < 2; n++) {
+            var curPlayer = this.players[n];
+            var r = curPlayer["r"]
+            var c = curPlayer["c"]
+            var symbol = curPlayer["symbol"]
+            let player = new Player(r, c, symbol)
 
-    setWallPlaceholder() {
-        // update or hide wall placement on hover if necessary
+            this.players.push(player)
 
-        var wallIntent = this.getWallIntent()
-        
-        if (!wallIntent) {  // undefined = not intending to place wall
-            wall.style.visibility = "hidden"
-            this.lastWallIntent = -1
-            return
+            var cell = getCell(r, c)
+            var cellp = cell.querySelector("p")
+            cellp.textContent = symbol
         }
-        if (areSameObject(wallIntent, this.lastWallIntent)) {
-            return
-        }
-        wall.style.visibility = "visible"
 
-        var row, col, isHorizontal
-        [row, col, isHorizontal] = wallIntent
+        this.toggleMoves()
 
-        var gridPos = gameGrid.getBoundingClientRect()  // todo: this is repeated from getRelativePos
-        var gameGridX = gridPos.x
-        var gameGridY = gridPos.y
-
-        var cellLength = this.bounds[0][1] - this.bounds[0][0]
-
-        var cellWithGap = this.gapSize + cellLength
-        
-        if (isHorizontal == true) {
-            wall.style.left = gameGridX + (col * cellWithGap) - (this.gapSize / 2) + "px"
-            wall.style.top = gameGridY + cellLength + (row * cellWithGap) + "px"
-            wall.style.transform = "none"
-        } else {
-            wall.style.left = gameGridX + (col * cellWithGap) - (this.gapSize / 2) + "px"
-            wall.style.top = gameGridY + (row * cellWithGap) - this.gapSize + "px"
-            wall.style.transform = "rotate(90deg)"
-        }
-        this.lastWallIntent = wallIntent
-
-        // update the event listener on intended placement if clicked
-        
     }
 
-    setCellBounds() {
-        this.bounds = []
-
-        const gridPos = gameGrid.getBoundingClientRect()
-        const gameGridX = gridPos.x  // top left corner of gameGrid
-        const gameGridY = gridPos.y
-
-        const cell1pos = document.getElementById("row-0").getBoundingClientRect()
-        const cell2pos = document.getElementById("row-1").getBoundingClientRect()
-        this.gapSize = cell2pos.y - cell1pos.y - cell1pos.height
-
-        for (let r = 0; r < gridSize; r++) {
-            // calc the Y gap between cur and next cell
-            var curCell = document.getElementById("row-" + r).getBoundingClientRect()
-            var boundStart = curCell.y - gameGridY
-            this.bounds.push([boundStart, boundStart + cell1pos.height])
-        }
-        // console.log(this.bounds)
-    }
-
-    getMoveCoords() {
-        const moveCoords = []
-        var player = this.getCurrentPlayer()
-        var r = player["r"]
-        var c = player["c"]
-
-        // scan neighboring cells for free spots; if neighbor is a player, can hop over
-        if (r > 0) { // upward
-            if (r > 1 && getCellText(r - 1, c)) {
-                moveCoords.push([r - 2, c])
-            } else {
-                moveCoords.push([r - 1, c])
-            }
-        }
-        if (r < gridSize - 1) {  // downward
-            if (r < gridSize - 2 && getCellText(r + 1, c)) {
-                moveCoords.push([r + 2, c])
-            } else {
-                moveCoords.push([r + 1, c])
-            }
-        }
-        if (c > 0) {  // leftward
-            if (c > 1 && getCellText(r, c - 1)) {
-                moveCoords.push([r , c - 2])
-            } else {
-                moveCoords.push([r, c - 1])
-            }
-        }
-        if (c < gridSize - 1) {  // rightward
-            if (c < gridSize - 2 && getCellText(r, c + 1)) {
-                moveCoords.push([r, c + 2])
-            } else {
-                moveCoords.push([r, c + 1])
-            }
-        }
-
-        return moveCoords
-    }
-
-    toggleMoves() {
-        // show/hide all possible moves from getMoveCoords()
-        var moveCoords = this.getMoveCoords()
-        moveCoords.forEach(moveCoord => {
-            cell = getCell(...moveCoord)  // moveCoord = tuple (r, c)
-            cell.classList.toggle("available-move")
-            if (cell.classList.contains("available-move")) {
-                var player = this.getCurrentPlayer()
-                var startR = player["r"]
-                var startC = player["c"]
-                var endR, endC
-                [endR, endC] = moveCoord
-                var move = new Move("step", startR, startC, endR, endC)
-                cell.addEventListener("click", () => { this.makeMove(move)})  // but function() doesn't work...
-            } else {
-                // clone cell and replace it, removing its event listeners
-                var clonedCell = cell.cloneNode(true)
-                cell.parentNode.replaceChild(clonedCell, cell)
-            }
-        });
+    initWallDiv() {
+        // resize wall according to cells
+        this.wall.style.height = this.gapSize + "px"
+        this.wall.style.width = (this.bounds[1][0] - this.bounds[0][0]) * 2 + "px"
+        this.wall.style.visibility = "hidden"
     }
 
     makeMove(move) {
@@ -299,33 +240,6 @@ class GameState {
         this.toggleMoves()
     }
 
-    initPlayers() {
-        // create and move players to their starting positions
-        for (let n = 0; n < numPlayers; n++) {
-            var curPlayer = Players[n];
-            var r = curPlayer["r"]
-            var c = curPlayer["c"]
-            var symbol = curPlayer["symbol"]
-            let player = new Player(r, c, symbol)
-
-            this.players.push(player)
-
-            var cell = getCell(r, c)
-            var cellp = cell.querySelector("p")
-            cellp.textContent = symbol
-        }
-
-        this.toggleMoves()
-
-    }
-
-    initWallDiv() {
-        // resize wall according to cells
-        wall.style.height = this.gapSize + "px"
-        wall.style.width = (this.bounds[1][0] - this.bounds[0][0]) * 2 + "px"
-        wall.style.visibility = "hidden"
-    }
-
     movePlayer(move) {
         // perform a state change with the player's move
 
@@ -342,8 +256,112 @@ class GameState {
         endCell.querySelector("p").innerHTML = symbol
         startCell.querySelector("p").innerHTML = ""
     }
+
+    nextTurn() {
+        this.turn = (this.turn + 1) % 2
+        this.updateTurnDisplay()
+    }
+
+    setCellBounds() {
+        this.bounds = []
+
+        const gridPos = this.gameGrid.getBoundingClientRect()
+        const gameGridX = gridPos.x  // top left corner of gameGrid
+        const gameGridY = gridPos.y
+
+        const cell1pos = document.getElementById("row-0").getBoundingClientRect()
+        const cell2pos = document.getElementById("row-1").getBoundingClientRect()
+        this.gapSize = cell2pos.y - cell1pos.y - cell1pos.height
+
+        for (let r = 0; r < gridSize; r++) {
+            // calc the Y gap between cur and next cell
+            var curCell = document.getElementById("row-" + r).getBoundingClientRect()
+            var boundStart = curCell.y - gameGridY
+            this.bounds.push([boundStart, boundStart + cell1pos.height])
+        }
+    }
+
+    setWallPlaceholder() {
+        // update or hide wall placement on hover if necessary
+
+        var wallIntent = this.getWallIntent()
+        
+        if (!wallIntent) {  // undefined = not intending to place wall
+            this.wall.style.visibility = "hidden"
+            this.lastWallIntent = -1
+            return
+        }
+        if (areSameObject(wallIntent, this.lastWallIntent)) {
+            return
+        }
+        this.wall.style.visibility = "visible"
+
+        var row, col, isHorizontal
+        [row, col, isHorizontal] = wallIntent
+
+        var gridPos = this.gameGrid.getBoundingClientRect()  // todo: this is repeated from getRelativePos
+        var gameGridX = gridPos.x
+        var gameGridY = gridPos.y
+
+        var cellLength = this.bounds[0][1] - this.bounds[0][0]
+
+        var cellWithGap = this.gapSize + cellLength
+        
+        if (isHorizontal == true) {
+            this.wall.style.left = gameGridX + (col * cellWithGap) - (this.gapSize / 2) + "px"
+            this.wall.style.top = gameGridY + cellLength + (row * cellWithGap) + "px"
+            this.wall.style.transform = "none"
+        } else {
+            this.wall.style.left = gameGridX + (col * cellWithGap) - (this.gapSize / 2) + "px"
+            this.wall.style.top = gameGridY + (row * cellWithGap) - this.gapSize + "px"
+            this.wall.style.transform = "rotate(90deg)"
+        }
+        this.lastWallIntent = wallIntent
+
+        // update the event listener on intended placement if clicked
+
+    }
+
+    toggleMoves() {
+        // show/hide all possible moves from getMoveCoords()
+        var moveCoords = this.getAvailableMoves()
+        moveCoords.forEach(moveCoord => {
+            cell = getCell(...moveCoord)  // moveCoord = tuple (r, c)
+            cell.classList.toggle("available-move")
+            if (cell.classList.contains("available-move")) {
+                var player = this.getCurrentPlayer()
+                var startR = player["r"]
+                var startC = player["c"]
+                var endR, endC
+                [endR, endC] = moveCoord
+                var move = new Move("step", startR, startC, endR, endC)
+                cell.addEventListener("click", () => { this.makeMove(move)})  // but function() doesn't work...
+            } else {
+                // clone cell and replace it, removing its event listeners
+                var clonedCell = cell.cloneNode(true)
+                cell.parentNode.replaceChild(clonedCell, cell)
+            }
+        });
+    }
+
+    updateTurnDisplay() {
+        if (this.winner != -1) {
+            this.playerTurn.innerHTML = "WINNER! " + this.players[this.winner]["symbol"]
+        } else {
+            this.playerTurn.innerHTML = "Player turn: " + this.players[this.turn]["symbol"]
+        }
+    }
 }
 
+class Move {
+    constructor(type, startR, startC, endR, endC) {
+        this.type = type
+        this.startR = startR
+        this.startC = startC
+        this.endR = endR
+        this.endC = endC
+    }
+}
 class Player {
     constructor(r, c, symbol) {
         this.r = r
@@ -360,34 +378,7 @@ class Wall {
     }
 }
 
-class Move {
-    constructor(type, startR, startC, endR, endC) {
-        this.type = type
-        this.startR = startR
-        this.startC = startC
-        this.endR = endR
-        this.endC = endC
-    }
-}
-
 // when page loads
 document.addEventListener("DOMContentLoaded", (event) => {
-    // construct grid of divs
-    for (let r = 0; r < gridSize; r++) {
-        let row = document.createElement("div")
-        row.id = "row-" + r
-
-        gameGrid.appendChild(row)
-
-        for (let c = 0; c < gridSize; c++) {
-            let col = document.createElement("div")
-            col.classList.add("col-" + c)
-            // col.textContent = ""
-            row.appendChild(col)
-
-            col.appendChild(document.createElement("p"))
-        }
-    }
-
-    gs = new GameState(numPlayers)
+    gs = new GameState()
 });
