@@ -53,6 +53,8 @@ class GameState {
         // if viewport changes, our cell gaps will too; recalculate...
         window.addEventListener("resize", (event) => { this.setCellBounds() })
         window.addEventListener("resize", (event) => { this.initWallDiv() })
+        window.addEventListener("resize", (event) => { this.redrawWalls() })
+
 
         this.moveStack = []
 
@@ -86,11 +88,13 @@ class GameState {
 
         if (this.winner != -1) {return []}
 
-        // scan neighboring cells for free spots; if neighbor is a player, can hop over
+        // scan neighboring cells for free spots; if neighbor is a player, can hop over, even sideways
+        // vertical
         if (r > 0) { // upward
             if (r > 1 && getCellText(r - 1, c)) {
                 moves.push([r - 2, c])
             } else {
+
                 moves.push([r - 1, c])
             }
         }
@@ -101,6 +105,7 @@ class GameState {
                 moves.push([r + 1, c])
             }
         }
+        // horizontal
         if (c > 0) {  // leftward
             if (c > 1 && getCellText(r, c - 1)) {
                 moves.push([r , c - 2])
@@ -138,6 +143,14 @@ class GameState {
         var relativeY = viewportY - gameGridY
 
         return [relativeX, relativeY]
+    }
+
+    getWallId(wall) {
+        var row = wall["row"]
+        var col = wall["col"]
+        var isHorizontal = wall["isHorizontal"]
+        const horizontalText = isHorizontal ? "horiz" : "vert"
+        return "wall" + row + "-" + col + "-" + horizontalText
     }
 
     getWallIntent() {
@@ -190,7 +203,11 @@ class GameState {
             return
         }
     }
-    
+
+    getWallsLeft() {
+        return this.players[this.turn]["wallsLeft"]
+    }
+
     initPlayers() {
         // create and move players to their starting positions
         for (let n = 0; n < 2; n++) {
@@ -218,30 +235,39 @@ class GameState {
         this.wall.style.visibility = "hidden"
     }
 
-    insertWall(wallObj) {
-        this.walls.push(wallObj)
+    isValidWallPlacement(wallMove) {
+        // check if player has walls left
+        if (!this.getWallsLeft()) return false
+
+        // check if wall is already placed in one of its two spots
         
-        const clonedWall = this.wall.cloneNode()
-        this.gameGrid.insertBefore(clonedWall, null)
-        this.setWallPosition(clonedWall, wallObj)
+
+        return true
+    }
+
+    insertWall(wallMove) {
+        this.walls.push(wallMove)
+        this.redrawWalls()
     }
 
     makeMove(move) {
         this.toggleMoves()
 
-        if (move.type == "step") {
+        if (move instanceof PlayerMove) {
             var player = this.getCurrentPlayer()
-            var r = move["endR"]
             this.movePlayer(move)
-
+            
+            var r = move["endR"]
             if (this.turn == 0 && r == 0) {
                 this.winner = 0
             } else if (this.turn == 1 && r == 8) {
                 this.winner = 1
             }
-        } else { // move.type == "wall"
-            // todo...
+        } else { // instanceof WallMove
+            this.insertWall(move)
+            this.players[this.turn]["wallsLeft"] -= 1
         }
+
         this.moveStack.push(move)
 
         this.nextTurn()
@@ -249,18 +275,18 @@ class GameState {
         this.toggleMoves()
     }
 
-    movePlayer(move) {
+    movePlayer(playerMove) {
         // perform a state change with the player's move
 
         var player = this.players[this.turn]
 
         // update the underlying player position
-        player["r"] = move["endR"]
-        player["c"] = move["endC"]
+        player["r"] = playerMove["endR"]
+        player["c"] = playerMove["endC"]
 
         // move the cell text
-        var startCell = getCell(move["startR"], move["startC"])
-        var endCell = getCell(move["endR"], move["endC"])
+        var startCell = getCell(playerMove["startR"], playerMove["startC"])
+        var endCell = getCell(playerMove["endR"], playerMove["endC"])
         var symbol = player["symbol"]
         endCell.querySelector("p").innerHTML = symbol
         startCell.querySelector("p").innerHTML = ""
@@ -290,11 +316,65 @@ class GameState {
         }
     }
 
+    redrawWalls() {
+        // clear existing walls, in case we resize and need to redraw
+        for (let r = 0; r < gridSize; r++) {
+            for (let c = 0; c < gridSize; c++) {
+                var curWall = document.getElementById(this.getWallId(new Wall(r, c, true)))
+                if (curWall) curWall.remove()
+                curWall = document.getElementById(this.getWallId(new Wall(r, c, false)))
+                if (curWall) curWall.remove()
+            }
+        }
+
+        console.log(this.walls)
+        this.walls.forEach((wall) => {
+            console.log(wall)
+            var row = wall["row"]
+            var col = wall["col"]
+            var isHorizontal = wall["isHorizontal"]
+
+            const clonedWall = this.wall.cloneNode()
+            const horizontalText = isHorizontal ? "horiz" : "vert"
+            clonedWall.id = this.getWallId(wall)
+            clonedWall.style.visibility = "visible"
+            this.gameGrid.insertBefore(clonedWall, null)
+            this.setWallPosition(clonedWall, wall)
+        })
+    }
+
+    setWallPlaceholder() {
+        // update or hide wall placement on hover if necessary
+
+        var curWall = this.getWallIntent()
+    
+        // curWall undefined = not intending to place wall
+        if (!curWall || !this.isValidWallPlacement) {
+            this.wall.style.visibility = "hidden"
+            this.lastWallIntent = -1
+            return
+        }
+        if (areSameObject(curWall, this.lastWallIntent)) {
+            return
+        }
+        this.wall.style.visibility = "visible"
+        
+        this.setWallPosition(this.wall, curWall)
+        this.lastWallIntent = curWall
+
+        // update the event listener on intended placement if clicked
+        var clonedWall = this.wall.cloneNode()
+        this.wall.parentNode.replaceChild(clonedWall, this.wall) // remove old event listener
+        this.wall = clonedWall
+        this.wall.addEventListener("click", () => {
+            this.makeMove(curWall)
+        })
+    }
+
     setWallPosition(wall, wallIntent) {
-        var row, col, isHorizontal
-        row = wallIntent["row"]
-        col = wallIntent["col"]
-        isHorizontal = wallIntent["isHorizontal"]
+        var row = wallIntent["row"]
+        var col = wallIntent["col"]
+        var isHorizontal = wallIntent["isHorizontal"]
 
         var gridPos = this.gameGrid.getBoundingClientRect()
         var gameGridX = gridPos.x
@@ -315,37 +395,6 @@ class GameState {
         }
     }
 
-    setWallPlaceholder() {
-        // update or hide wall placement on hover if necessary
-
-        var wallIntent = this.getWallIntent()
-        
-        if (!wallIntent) {  // undefined = not intending to place wall
-            this.wall.style.visibility = "hidden"
-            this.lastWallIntent = -1
-            return
-        }
-        if (areSameObject(wallIntent, this.lastWallIntent)) {
-            return
-        }
-        this.wall.style.visibility = "visible"
-
-        
-        this.setWallPosition(this.wall, wallIntent)
-        this.lastWallIntent = wallIntent
-
-        // update the event listener on intended placement if clicked
-        var clonedWall = this.wall.cloneNode()
-        this.wall.parentNode.replaceChild(clonedWall, this.wall) // remove old event listener
-        this.wall = clonedWall
-        this.wall.addEventListener("click", () => {
-            this.insertWall(wallIntent);
-        })
-
-        // place back original setWallPlaceholder listener
-        // this.gameGrid.addEventListener("mousemove", (event) => { this.setWallPlaceholder() })
-    }
-
     toggleMoves() {
         // show/hide all possible moves from getMoveCoords()
         var moveCoords = this.getAvailableMoves()
@@ -358,8 +407,8 @@ class GameState {
                 var startC = player["c"]
                 var endR, endC
                 [endR, endC] = moveCoord
-                var move = new Move("step", startR, startC, endR, endC)
-                cell.addEventListener("click", () => { this.makeMove(move)})  // but function() doesn't work...
+                var move = new PlayerMove(startR, startC, endR, endC)
+                cell.addEventListener("click", () => { this.makeMove(move)})
             } else {
                 // clone cell and replace it, removing its event listeners
                 var clonedCell = cell.cloneNode(true)
@@ -372,26 +421,26 @@ class GameState {
         if (this.winner != -1) {
             this.playerTurn.innerHTML = "WINNER! " + this.players[this.winner]["symbol"]
         } else {
-            this.playerTurn.innerHTML = "Player turn: " + this.players[this.turn]["symbol"]
+            this.playerTurn.innerHTML = "Turn: " + this.players[this.turn]["symbol"] + ", walls left: " + this.getWallsLeft()
         }
     }
 }
 
-class Move {
-    constructor(type, startR, startC, endR, endC) {
-        this.type = type
-        this.startR = startR
-        this.startC = startC
-        this.endR = endR
-        this.endC = endC
-    }
-}
 class Player {
     constructor(r, c, symbol, wallsLeft) {
         this.r = r
         this.c = c
         this.symbol = symbol
-        this.wallsLeft = this.wallsLeft
+        this.wallsLeft = wallsLeft
+    }
+}
+
+class PlayerMove {
+    constructor(startR, startC, endR, endC) {
+        this.startR = startR
+        this.startC = startC
+        this.endR = endR
+        this.endC = endC
     }
 }
 
