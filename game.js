@@ -240,7 +240,38 @@ class GameState {
         if (!this.getWallsLeft()) return false
 
         // check if wall is already placed in one of its two spots
-        
+        var row = wallMove["row"]
+        var col = wallMove["col"]
+        var isHorizontal = wallMove["isHorizontal"]
+        console.log(wallMove)
+        if (isHorizontal) { // check row placements at cur pos, and at one directly to left
+            var cur = new Wall(row, col, isHorizontal)
+            var prev = new Wall(row, col - 1, isHorizontal)
+            var next = new Wall(row, col + 1, isHorizontal)
+            if (this.walls.find((el) => JSON.stringify(el) === JSON.stringify(cur)) ||
+                this.walls.find((el) => JSON.stringify(el) === JSON.stringify(prev)) ||
+                this.walls.find((el) => JSON.stringify(el) === JSON.stringify(next))) {
+                console.log("HORIZ")
+                return false
+            }
+        } else {  // also check placement directly above
+            var cur = new Wall(row, col, isHorizontal)
+            var prev = new Wall(row - 1, col, isHorizontal)
+            var next = new Wall(row + 1, col, isHorizontal)
+            if (this.walls.find((el) => JSON.stringify(el) === JSON.stringify(cur)) ||
+                this.walls.find((el) => JSON.stringify(el) === JSON.stringify(prev)) ||
+                this.walls.find((el) => JSON.stringify(el) === JSON.stringify(next))) {
+                console.log("VERT")
+                return false
+            }
+        }
+
+        // check if we will run into another wall with current wall
+        if (isHorizontal) {
+
+        } else {
+            
+        }
 
         return true
     }
@@ -327,9 +358,7 @@ class GameState {
             }
         }
 
-        console.log(this.walls)
         this.walls.forEach((wall) => {
-            console.log(wall)
             var row = wall["row"]
             var col = wall["col"]
             var isHorizontal = wall["isHorizontal"]
@@ -349,7 +378,7 @@ class GameState {
         var curWall = this.getWallIntent()
     
         // curWall undefined = not intending to place wall
-        if (!curWall || !this.isValidWallPlacement) {
+        if (!curWall || !this.isValidWallPlacement(curWall)) {
             this.wall.style.visibility = "hidden"
             this.lastWallIntent = -1
             return
