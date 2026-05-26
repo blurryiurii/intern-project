@@ -8,6 +8,7 @@ body {
     align-items: center; /* vertical */
 
     height: 100vh;
+    margin: 0;
 }
 
 
@@ -37,7 +38,7 @@ body {
 #game-grid div div {
     display: flex;
     
-    width: 10%;
+    width: 9.8%;
     aspect-ratio: 1;  /* make height same as width*/
 
     border: 2px solid #6d8ca0;

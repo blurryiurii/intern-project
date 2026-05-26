@@ -37,8 +37,9 @@ class GameState {
         this.winner = -1
 
         this.players = [
-            {"r": 8, "c": 4, "symbol": "X"},
-            {"r": 0, "c": 4, "symbol": "Y"}
+            //         r, c, sym, walls
+            new Player(8, 4, "X", 10),
+            new Player(0, 4, "Y", 10)
         ]
 
         this.initPlayers()
@@ -184,7 +185,7 @@ class GameState {
         }
 
         if (found) {
-            return [row, col, isHorizontal]
+            return new Wall(row, col, isHorizontal)
         } else {
             return
         }
@@ -215,6 +216,14 @@ class GameState {
         this.wall.style.height = this.gapSize + "px"
         this.wall.style.width = (this.bounds[1][0] - this.bounds[0][0]) * 2 + "px"
         this.wall.style.visibility = "hidden"
+    }
+
+    insertWall(wallObj) {
+        this.walls.push(wallObj)
+        
+        const clonedWall = this.wall.cloneNode()
+        this.gameGrid.insertBefore(clonedWall, null)
+        this.setWallPosition(clonedWall, wallObj)
     }
 
     makeMove(move) {
@@ -281,6 +290,31 @@ class GameState {
         }
     }
 
+    setWallPosition(wall, wallIntent) {
+        var row, col, isHorizontal
+        row = wallIntent["row"]
+        col = wallIntent["col"]
+        isHorizontal = wallIntent["isHorizontal"]
+
+        var gridPos = this.gameGrid.getBoundingClientRect()
+        var gameGridX = gridPos.x
+        var gameGridY = gridPos.y
+
+        var cellLength = this.bounds[0][1] - this.bounds[0][0]
+
+        var cellWithGap = this.gapSize + cellLength
+        
+        if (isHorizontal == true) {
+            wall.style.left = gameGridX + (col * cellWithGap) - (this.gapSize / 2) + "px"
+            wall.style.top = gameGridY + cellLength + (row * cellWithGap) + "px"
+            wall.style.transform = "none"
+        } else {
+            wall.style.left = gameGridX + (col * cellWithGap) - (this.gapSize / 2) + "px"
+            wall.style.top = gameGridY + (row * cellWithGap) - this.gapSize + "px"
+            wall.style.transform = "rotate(90deg)"
+        }
+    }
+
     setWallPlaceholder() {
         // update or hide wall placement on hover if necessary
 
@@ -296,30 +330,20 @@ class GameState {
         }
         this.wall.style.visibility = "visible"
 
-        var row, col, isHorizontal
-        [row, col, isHorizontal] = wallIntent
-
-        var gridPos = this.gameGrid.getBoundingClientRect()  // todo: this is repeated from getRelativePos
-        var gameGridX = gridPos.x
-        var gameGridY = gridPos.y
-
-        var cellLength = this.bounds[0][1] - this.bounds[0][0]
-
-        var cellWithGap = this.gapSize + cellLength
         
-        if (isHorizontal == true) {
-            this.wall.style.left = gameGridX + (col * cellWithGap) - (this.gapSize / 2) + "px"
-            this.wall.style.top = gameGridY + cellLength + (row * cellWithGap) + "px"
-            this.wall.style.transform = "none"
-        } else {
-            this.wall.style.left = gameGridX + (col * cellWithGap) - (this.gapSize / 2) + "px"
-            this.wall.style.top = gameGridY + (row * cellWithGap) - this.gapSize + "px"
-            this.wall.style.transform = "rotate(90deg)"
-        }
+        this.setWallPosition(this.wall, wallIntent)
         this.lastWallIntent = wallIntent
 
         // update the event listener on intended placement if clicked
+        var clonedWall = this.wall.cloneNode()
+        this.wall.parentNode.replaceChild(clonedWall, this.wall) // remove old event listener
+        this.wall = clonedWall
+        this.wall.addEventListener("click", () => {
+            this.insertWall(wallIntent);
+        })
 
+        // place back original setWallPlaceholder listener
+        // this.gameGrid.addEventListener("mousemove", (event) => { this.setWallPlaceholder() })
     }
 
     toggleMoves() {
@@ -363,10 +387,11 @@ class Move {
     }
 }
 class Player {
-    constructor(r, c, symbol) {
+    constructor(r, c, symbol, wallsLeft) {
         this.r = r
         this.c = c
         this.symbol = symbol
+        this.wallsLeft = this.wallsLeft
     }
 }
 
