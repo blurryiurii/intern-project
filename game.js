@@ -20,7 +20,7 @@ function getCellText(r, c) {
 }
 
 function areSameObject(obj1, obj2) {
-    return JSON.stringify(obj1) == JSON.stringify(obj2)
+    return JSON.stringify(obj1) === JSON.stringify(obj2)
 }
 
 // keeps track of players, walls, positions, turns
@@ -265,12 +265,18 @@ class GameState {
                 return false
             }
         }
+    
+        // check diagonals too
+        var cur = new Wall(row + 1, col, !isHorizontal)
+        if (this.walls.find((el) => JSON.stringify(el) === JSON.stringify(next))) {
+            console.log(diag)
+        }
 
         // check if we will run into another wall with current wall
         if (isHorizontal) {
-
-        } else {
             
+        } else {
+
         }
 
         return true
@@ -289,9 +295,9 @@ class GameState {
             this.movePlayer(move)
             
             var r = move["endR"]
-            if (this.turn == 0 && r == 0) {
+            if (this.turn === 0 && r === 0) {
                 this.winner = 0
-            } else if (this.turn == 1 && r == 8) {
+            } else if (this.turn === 1 && r === 8) {
                 this.winner = 1
             }
         } else { // instanceof WallMove
@@ -413,7 +419,7 @@ class GameState {
 
         var cellWithGap = this.gapSize + cellLength
         
-        if (isHorizontal == true) {
+        if (isHorizontal === true) {
             wall.style.left = gameGridX + (col * cellWithGap) - (this.gapSize / 2) + "px"
             wall.style.top = gameGridY + cellLength + (row * cellWithGap) + "px"
             wall.style.transform = "none"
