@@ -249,7 +249,7 @@ class GameState {
             var prev = new Wall(row, col - 1, isHorizontal)
             var next = new Wall(row, col + 1, isHorizontal)
             if (this.walls.find((el) => JSON.stringify(el) === JSON.stringify(cur)) ||
-                this.walls.find((el) => JSON.stringify(el) === JSON.stringify(prev)) ||
+                  this.walls.find((el) => JSON.stringify(el) === JSON.stringify(prev)) ||
                 this.walls.find((el) => JSON.stringify(el) === JSON.stringify(next))) {
                 return false
             }
@@ -272,7 +272,6 @@ class GameState {
             }
         } else {
             var cur = new Wall(row - 1, col, !isHorizontal)
-            console.log(cur)
             if (this.walls.find((el) => JSON.stringify(el) === JSON.stringify(cur))) {
                 console.log("DIAG")
                 return false
