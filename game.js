@@ -243,7 +243,7 @@ class GameState {
         var row = wallMove["row"]
         var col = wallMove["col"]
         var isHorizontal = wallMove["isHorizontal"]
-        console.log(wallMove)
+        console.log("wallMove", wallMove)
         if (isHorizontal) { // check row placements at cur pos, and at one directly to left
             var cur = new Wall(row, col, isHorizontal)
             var prev = new Wall(row, col - 1, isHorizontal)
@@ -251,7 +251,6 @@ class GameState {
             if (this.walls.find((el) => JSON.stringify(el) === JSON.stringify(cur)) ||
                 this.walls.find((el) => JSON.stringify(el) === JSON.stringify(prev)) ||
                 this.walls.find((el) => JSON.stringify(el) === JSON.stringify(next))) {
-                console.log("HORIZ")
                 return false
             }
         } else {  // also check placement directly above
@@ -261,15 +260,23 @@ class GameState {
             if (this.walls.find((el) => JSON.stringify(el) === JSON.stringify(cur)) ||
                 this.walls.find((el) => JSON.stringify(el) === JSON.stringify(prev)) ||
                 this.walls.find((el) => JSON.stringify(el) === JSON.stringify(next))) {
-                console.log("VERT")
                 return false
             }
         }
     
-        // check diagonals too
-        var cur = new Wall(row + 1, col, !isHorizontal)
-        if (this.walls.find((el) => JSON.stringify(el) === JSON.stringify(next))) {
-            console.log(diag)
+        // check diagonals too (if we will intersect walls/create a cross)
+        if (isHorizontal) {
+            var cur = new Wall(row + 1, col, !isHorizontal)
+            if (this.walls.find((el) => JSON.stringify(el) === JSON.stringify(cur))) {
+                return false
+            }
+        } else {
+            var cur = new Wall(row - 1, col, !isHorizontal)
+            console.log(cur)
+            if (this.walls.find((el) => JSON.stringify(el) === JSON.stringify(cur))) {
+                console.log("DIAG")
+                return false
+            }
         }
 
         // check if we will run into another wall with current wall
